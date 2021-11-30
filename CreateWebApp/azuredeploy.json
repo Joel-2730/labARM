@@ -1,0 +1,96 @@
+{
+  "$ esquema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parámetros": {
+    "nombre del proyecto": {
+      "tipo": "cadena",
+      "minLength": 3,
+      "maxLength": 11,
+      "metadatos": {
+        "description": "Especifique un nombre de proyecto que se utiliza para generar nombres de recursos".
+      }
+    },
+    "localización": {
+      "tipo": "cadena",
+      "defaultValue": "[resourceGroup (). location]",
+      "metadatos": {
+        "description": "Especifique una ubicación para los recursos".
+      }
+    },
+    "linuxFxVersion": {
+      "tipo": "cadena",
+      "defaultValue": "php | 7.0",
+      "metadatos": {
+        "description": "La pila en tiempo de ejecución de la aplicación web actual"
+      }
+    }
+  },
+  "variables": {
+    "storageAccountName": "[concat (parameters ('projectName'), uniqueString (resourceGroup (). id))]",
+    "webAppName": "[concat (parámetros ('projectName'), 'WebApp')]",
+    "appServicePlanName": "[concat (parámetros ('projectName'), 'Plan')]"
+  },
+  "recursos": [
+    {
+      "nombre": "plantilla vinculada",
+      "tipo": "Microsoft.Resources / deployments",
+      "apiVersion": "2021-04-01",
+      "propiedades": {
+        "mode": "Incremental",
+        "templateLink": {
+          "relatedPath": "LinkedStorageAccount.json"
+        },
+        "parámetros": {
+          "storageAccountName": {
+            "valor": "[variables ('storageAccountName')]"
+          },
+          "localización": {
+            "valor": "[parámetros ('ubicación')]"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "Microsoft.Web / serverfarms",
+      "apiVersion": "2020-12-01",
+      "nombre": "[variables ('appServicePlanName')]",
+      "ubicación": "[parámetros ('ubicación')]",
+      "sku": {
+        "nombre": "B1",
+        "tier": "Básico",
+        "tamaño": "B1",
+        "familia": "B",
+        "capacidad": 1
+      },
+      "kind": "linux",
+      "propiedades": {
+        "perSiteScaling": falso,
+        "reservado": verdadero,
+        "targetWorkerCount": 0,
+        "targetWorkerSizeId": 0
+      }
+    },
+    {
+      "tipo": "Microsoft.Web / sitios",
+      "apiVersion": "2020-12-01",
+      "nombre": "[variables ('webAppName')]",
+      "ubicación": "[parámetros ('ubicación')]",
+      "depende de": [
+        "[resourceId ('Microsoft.Web / serverfarms', variables ('appServicePlanName'))]"
+      ],
+      "kind": "aplicación",
+      "propiedades": {
+        "serverFarmId": "[resourceId ('Microsoft.Web / serverfarms', variables ('appServicePlanName'))]",
+        "siteConfig": {
+          "linuxFxVersion": "[parámetros ('linuxFxVersion')]"
+        }
+      }
+    }
+  ],
+  "salidas": {
+    "storageEndpoint": {
+      "tipo": "objeto",
+      "valor": "[referencia ('plantilla vinculada'). outputs.storageEndpoint.value]"
+    }
+  }
+}
